@@ -179,3 +179,5 @@ Please, make sure all steps are using **the same** python version and that you h
 ## License
 
 [License](LICENSE.txt)
+
+W&B link https://wandb.ai/gcarr86-wgu/nyc_airbnb?nw=nwusergcarr86
