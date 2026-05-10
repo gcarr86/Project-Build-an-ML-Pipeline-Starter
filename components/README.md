@@ -35,3 +35,16 @@ How to Run Everything
 - Send a POST request to the /predict endpoint with the required fields
 - (Optional) Build and run the Docker container using the commands above
 - Use the containerized API the same way through the /docs interface
+
+## Screenshots
+
+### Successful Pipeline Run
+![Pipeline Run](screenshots/successful pipeline run.png)
+
+### W&B Project
+![W&B Project](screenshots/W&B.png)
+
+### W&B Artifacts
+![Artifacts](screenshots/artifacts.png)
+
+https://wandb.ai/gcarr86-wgu/nyc_airbnb?nw=nwusergcarr86
