@@ -94,8 +94,13 @@ def go(args):
     logger.info("Keeping required columns")
     df = df[required_columns].copy()
 
-    logger.info("Skipping NYC geographic boundary filter for current sample")
+    logger.info("Filtering to NYC geographic boundaries")
 
+    df = df[
+        df["longitude"].between(-74.25, -73.50)
+        & df["latitude"].between(40.5, 41.2)
+    ].copy()
+    
     logger.info("Filling remaining missing values")
 
     df["reviews_per_month"] = df["reviews_per_month"].fillna(0)
