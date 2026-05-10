@@ -1,103 +1,149 @@
 #!/usr/bin/env python
 """
-Download from W&B the raw dataset and apply some basic data cleaning, exporting the result to a new artifact
+Basic cleaning script for the Udacity ML Pipeline project.
+Downloads a raw CSV artifact from W&B, cleans it, and uploads the cleaned CSV back to W&B.
 """
+
 import argparse
 import logging
-import wandb
+import os
+import tempfile
+
 import pandas as pd
+import wandb
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)-15s %(message)s")
 logger = logging.getLogger()
 
-# DO NOT MODIFY
+
 def go(args):
+    """
+    Download raw data from W&B, apply basic cleaning, and upload the cleaned data.
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Command line arguments containing input artifact, output artifact,
+        output type, output description, min price, and max price.
+    """
 
     run = wandb.init(job_type="basic_cleaning")
-    run.config.update(args)
 
-    # Download input artifact. This will also log that this script is using this
-    
-    run = wandb.init(project="nyc_airbnb", group="cleaning", save_code=True)
-    artifact_local_path = run.use_artifact(args.input_artifact).file()
-    df = pd.read_csv(artifact_local_path)
-    # Drop outliers
-    min_price = args.min_price
-    max_price = args.max_price
-    idx = df['price'].between(min_price, max_price)
-    df = df[idx].copy()
-    # Convert last_review to datetime
-    df['last_review'] = pd.to_datetime(df['last_review'])
+    logger.info("Downloading input artifact")
+    artifact = run.use_artifact(args.input_artifact)
+    artifact_path = artifact.file()
 
-    # Step 6: TODO
-    # Only implement this step when reaching Step 6: Pipeline Release and Updates
-    # in the project.
-    # Add longitude and latitude filter to allow test_proper_boundaries to pass
-    # ENTER CODE HERE
+    logger.info(f"Loading data from {artifact_path}")
+    df = pd.read_csv(artifact_path)
 
-    # Save the cleaned data
-    df.to_csv('clean_sample.csv',index=False)
+    logger.info("Filtering price outliers")
+    df = df[df["price"].between(args.min_price, args.max_price)].copy()
 
-    # log the new data.
-    artifact = wandb.Artifact(
-     args.output_artifact,
-     type=args.output_type,
-     description=args.output_description,
- )
-    artifact.add_file("clean_sample.csv")
-    run.log_artifact(artifact)
+    logger.info("Converting last_review to datetime")
+    df["last_review"] = pd.to_datetime(df["last_review"])
+
+    logger.info("Renaming columns if needed")
+    df = df.rename(
+        columns={
+            "neighbourhood_group_cleansed": "neighbourhood_group",
+            "neighbourhood_cleansed": "neighbourhood",
+        }
+    )
+
+    required_columns = [
+        "id",
+        "name",
+        "host_id",
+        "host_name",
+        "neighbourhood_group",
+        "neighbourhood",
+        "latitude",
+        "longitude",
+        "room_type",
+        "price",
+        "minimum_nights",
+        "number_of_reviews",
+        "last_review",
+        "reviews_per_month",
+        "calculated_host_listings_count",
+        "availability_365",
+    ]
+
+    logger.info("Keeping required columns")
+    df = df[required_columns].copy()
+
+    logger.info("Filtering to NYC geographic boundaries")
+    df = df[
+        df["longitude"].between(-74.25, -73.50)
+        & df["latitude"].between(40.5, 41.2)
+    ].copy()
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        output_path = os.path.join(tmp_dir, args.output_artifact)
+
+        logger.info(f"Saving cleaned data to {output_path}")
+        df.to_csv(output_path, index=False)
+
+        logger.info("Uploading cleaned artifact to W&B")
+        artifact = wandb.Artifact(
+            name=args.output_artifact,
+            type=args.output_type,
+            description=args.output_description,
+        )
+        artifact.add_file(output_path)
+
+        run.log_artifact(artifact)
+
+    run.finish()
+    logger.info("Cleaning complete")
 
 
-# TODO: In the code below, fill in the data type for each argument. The data type should be str, float or int. 
-# TODO: In the code below, fill in a description for each argument. The description should be a string.
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="A very basic data cleaning")
-  
+    parser = argparse.ArgumentParser(description="Basic data cleaning")
+
     parser.add_argument(
-        "--input_artifact", 
-        type = ## INSERT TYPE HERE: str, float or int,
-        help = ## INSERT DESCRIPTION HERE,
-        required = True
+        "--input_artifact",
+        type=str,
+        help="Input W&B artifact, for example sample.csv:latest",
+        required=True,
     )
 
     parser.add_argument(
-        "--output_artifact", 
-        type = ## INSERT TYPE HERE: str, float or int,
-        help = ## INSERT DESCRIPTION HERE,
-        required = True
+        "--output_artifact",
+        type=str,
+        help="Name of the cleaned output artifact",
+        required=True,
     )
 
     parser.add_argument(
-        "--output_type", 
-        type = ## INSERT TYPE HERE: str, float or int,
-        help = ## INSERT DESCRIPTION HERE,
-        required = True
+        "--output_type",
+        type=str,
+        help="Type of the cleaned output artifact",
+        required=True,
     )
 
     parser.add_argument(
-        "--output_description", 
-        type = ## INSERT TYPE HERE: str, float or int,
-        help = ## INSERT DESCRIPTION HERE,
-        required = True
+        "--output_description",
+        type=str,
+        help="Description of the cleaned output artifact",
+        required=True,
     )
 
     parser.add_argument(
-        "--min_price", 
-        type = ## INSERT TYPE HERE: str, float or int,
-        help = ## INSERT DESCRIPTION HERE,
-        required = True
+        "--min_price",
+        type=float,
+        help="Minimum allowed price",
+        required=True,
     )
 
     parser.add_argument(
         "--max_price",
-        type = ## INSERT TYPE HERE: str, float or int,
-        help = ## INSERT DESCRIPTION HERE,
-        required = True
+        type=float,
+        help="Maximum allowed price",
+        required=True,
     )
 
-
     args = parser.parse_args()
-
     go(args)

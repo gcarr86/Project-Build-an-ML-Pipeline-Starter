@@ -31,7 +31,7 @@ def test_column_names(data: pd.DataFrame) -> None:
     these_columns = data.columns.values
 
     # This also enforces the same order
-    assert list(expected_colums) == list(these_columns)
+    assert list(expected_columns) == list(these_columns)
 
 
 def test_neighborhood_names(data: pd.DataFrame) -> None:
@@ -87,3 +87,11 @@ def test_similar_neigh_distrib(data: pd.DataFrame, ref_data: pd.DataFrame, kl_th
 ########################################################
 # Implement here test_row_count and test_price_range   #
 ########################################################
+def test_row_count(data: pd.DataFrame) -> None:
+    """Test that the cleaned dataset has a reasonable number of rows."""
+    assert 15000 < data.shape[0] < 20000
+
+
+def test_price_range(data: pd.DataFrame) -> None:
+    """Test that all prices are within the expected range."""
+    assert data["price"].between(10, 350).all()

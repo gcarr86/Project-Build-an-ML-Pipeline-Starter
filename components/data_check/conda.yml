@@ -1,0 +1,11 @@
+name: data_check
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pandas
+  - scipy
+  - pip
+  - pip:
+      - wandb
+      - mlflow

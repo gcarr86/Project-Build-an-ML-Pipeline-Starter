@@ -1,0 +1,15 @@
+name: evaluate
+
+python_env: conda.yml
+
+entry_points:
+
+  main:
+    parameters:
+      model_export: {type: str}
+      test_artifact: {type: str}
+
+    command: >
+      python run.py
+      --model_export {model_export}
+      --test_artifact {test_artifact}

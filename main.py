@@ -13,6 +13,7 @@ _steps = [
     "data_check",
     "data_split",
     "train_random_forest",
+    "evaluate",
     # NOTE: We do not include this in the steps so it is not run by mistake.
     # You first need to promote a model export to "prod" before you can run this,
     # then you need to run this step explicitly
@@ -40,7 +41,7 @@ def go(config: DictConfig):
             _ = mlflow.run(
                 f"{config['main']['components_repository']}/get_data",
                 "main",
-                env_manager="conda",
+                env_manager="local",
                 parameters={
                     "sample": config["etl"]["sample"],
                     "artifact_name": "sample.csv",
@@ -50,46 +51,97 @@ def go(config: DictConfig):
             )
 
         if "basic_cleaning" in active_steps:
-            ##################
-            # Implement here #
-            ##################
-            pass
+            _ = mlflow.run(
+                f"{config['main']['components_repository']}/basic_cleaning",
+                "main",
+                env_manager="local",
+                parameters={
+                    "input_artifact": "sample.csv:latest",
+                    "output_artifact": "clean_sample.csv",
+                     "output_type": "clean_data",
+                    "output_description": "Data after basic cleaning",
+                    "min_price": config["etl"]["min_price"],
+                    "max_price": config["etl"]["max_price"],
+                },
+              )
 
         if "data_check" in active_steps:
-            ##################
-            # Implement here #
-            ##################
-            pass
+            _ = mlflow.run(
+                f"{config['main']['components_repository']}/data_check",
+                "main",
+                env_manager="local",
+                 parameters={
+                    "reference_artifact": "sample.csv:latest",
+                    "sample_artifact": "clean_sample.csv:latest",
+                    "ks_alpha": config["data_check"]["ks_alpha"],
+                    "kl_threshold": config["data_check"]["kl_threshold"],
+                },
+            )
+
+
+            
 
         if "data_split" in active_steps:
-            ##################
-            # Implement here #
-            ##################
-            pass
-
+             _ = mlflow.run(
+                f"{config['main']['components_repository']}/data_split",
+                 "main",
+                env_manager="local",
+                parameters={
+                    "input_artifact": "clean_sample.csv:latest",
+                    "test_size": config["modeling"]["test_size"],
+                    "val_size": config["modeling"]["val_size"],
+                    "random_seed": config["modeling"]["random_seed"],
+                    "stratify_by": config["modeling"]["stratify_by"],
+                },
+            )
         if "train_random_forest" in active_steps:
 
             # NOTE: we need to serialize the random forest configuration into JSON
             rf_config = os.path.abspath("rf_config.json")
+            #REMOVE STALE FILE if exists
+            if os.path.exists(rf_config):
+                os.remove(rf_config)
+
             with open(rf_config, "w+") as fp:
-                json.dump(dict(config["modeling"]["random_forest"].items()), fp)  # DO NOT TOUCH
+                json.dump({"random_forest": dict(config["modeling"]["random_forest"])},fp) # DO NOT TOUCH
 
             # NOTE: use the rf_config we just created as the rf_config parameter for the train_random_forest
-            # step
+            # Run the training component
+            _ = mlflow.run(
+                f"{config['main']['components_repository']}/train_random_forest",
+                "main",
+                env_manager="local",
+                parameters={
+                    "train_artifact": "train.csv:latest",
+                    "val_artifact": "val.csv:latest",
+                    "model_config": rf_config,
+                    "random_seed": config["modeling"]["random_seed"],
+                 },
+             )
 
-            ##################
-            # Implement here #
-            ##################
+            
+        if "evaluate" in active_steps:
 
-            pass
+            _ = mlflow.run(
+                f"{config['main']['components_repository']}/evaluate",
+                "main",
+                env_manager="local",
+                parameters={
+                    "model_export": "model_export:latest",
+                    "test_artifact": "test.csv:latest",
+                },
+            )
 
         if "test_regression_model" in active_steps:
-
-            ##################
-            # Implement here #
-            ##################
-
-            pass
+            _ = mlflow.run(
+                f"{config['main']['components_repository']}/evaluate",
+                "main",
+                env_manager="local",
+                parameters={
+                    "model_export": "model_export:prod",
+                    "test_artifact": "test.csv:latest",
+                },
+            )
 
 
 if __name__ == "__main__":

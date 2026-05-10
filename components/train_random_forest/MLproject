@@ -1,0 +1,22 @@
+name: train_random_forest
+env_manager: local
+# conda_env: conda.yml
+
+entry_points:
+  main:
+    parameters:
+      train_artifact:
+        type: string
+      val_artifact:
+        type: string
+      model_config:
+        type: string
+      random_seed:
+        type: int
+
+    command: >
+      python run.py
+      --train_artifact {train_artifact}
+      --val_artifact {val_artifact}
+      --model_config {model_config}
+      --random_seed {random_seed}

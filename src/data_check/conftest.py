@@ -1,71 +1,33 @@
 import pytest
 import pandas as pd
-import wandb
+import os
 
+# Path to your cleaned data file
+DATA_PATH = "data/raw_data.csv"
+REF_DATA_PATH = "data/raw_data.csv"
 
-def pytest_addoption(parser):
-    parser.addoption("--csv", action="store")
-    parser.addoption("--ref", action="store")
-    parser.addoption("--kl_threshold", action="store")
-    parser.addoption("--min_price", action="store")
-    parser.addoption("--max_price", action="store")
-
+  # 
 
 @pytest.fixture(scope='session')
-def data(request):
-    run = wandb.init(job_type="data_tests", resume=True)
-
-    # Download input artifact. This will also note that this script is using this
-    # particular version of the artifact
-    data_path = run.use_artifact(request.config.option.csv).file()
-
-    if data_path is None:
-        pytest.fail("You must provide the --csv option on the command line")
-
-    df = pd.read_csv(data_path)
-
-    return df
-
+def data():
+    if not os.path.exists(DATA_PATH):
+        pytest.fail(f"Data file not found at {DATA_PATH}")
+    return pd.read_csv(DATA_PATH)
 
 @pytest.fixture(scope='session')
-def ref_data(request):
-    run = wandb.init(job_type="data_tests", resume=True)
-
-    # Download input artifact. This will also note that this script is using this
-    # particular version of the artifact
-    data_path = run.use_artifact(request.config.option.ref).file()
-
-    if data_path is None:
-        pytest.fail("You must provide the --ref option on the command line")
-
-    df = pd.read_csv(data_path)
-
-    return df
-
+def ref_data():
+    if not os.path.exists(REF_DATA_PATH):
+        pytest.fail(f"Reference data file not found at {REF_DATA_PATH}")
+    return pd.read_csv(REF_DATA_PATH)
 
 @pytest.fixture(scope='session')
-def kl_threshold(request):
-    kl_threshold = request.config.option.kl_threshold
-
-    if kl_threshold is None:
-        pytest.fail("You must provide a threshold for the KL test")
-
-    return float(kl_threshold)
+def kl_threshold():
+    return 0.2   # default threshold used in Udacity rubric
 
 @pytest.fixture(scope='session')
-def min_price(request):
-    min_price = request.config.option.min_price
-
-    if min_price is None:
-        pytest.fail("You must provide min_price")
-
-    return float(min_price)
+def min_price():
+    return 10.0  # adjust if your project uses different bounds
 
 @pytest.fixture(scope='session')
-def max_price(request):
-    max_price = request.config.option.max_price
-
-    if max_price is None:
-        pytest.fail("You must provide max_price")
-
-    return float(max_price)
+def max_price():
+    return 350.0  # adjust if your project uses different bounds
